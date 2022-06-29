@@ -35,10 +35,12 @@ class QImageViewer(QMainWindow):
         self.setFont(QFont("Consolas"))
 
         self.filename_col = "filename"
+        self.pred_col = "pred."
         self.tag_col = "tag"
         self.conf_score_col = "conf. score"
-        self.origin_cols = [self.filename_col, "prediction", self.conf_score_col]
-        self.tagged_cols = ["filename", "prediction", self.tag_col, self.conf_score_col]
+        self.origin_cols = [self.filename_col, self.pred_col, self.conf_score_col]
+        self.tagged_cols = ["filename", self.pred_col, self.tag_col, self.conf_score_col]
+        self.pred_col_fixed = f"{self.pred_col:<7}"        
         self.tag_col_fixed = f"{self.tag_col:<7}"
         self.conf_score_col_fixed = f"{self.conf_score_col:<7}"
 
@@ -89,7 +91,7 @@ class QImageViewer(QMainWindow):
         self.subTagLabel = QLabel()
         self.subTagLabel.setText("tag(sub)")
         self.subTagLineEdit = self.createSubTagLineEdit()
-        self.subTagLineEdit.textEdited.connect(self.saveTagWithSubTag)
+        self.subTagLineEdit.returnPressed.connect(self.saveTagWithSubTag)
         # self.subTagComboBox = self.createSubTagCombobox()
         # self.subTagComboBox.activated.connect(self.saveTag)
 
@@ -117,6 +119,14 @@ class QImageViewer(QMainWindow):
         self.tagLayout.addLayout(self.mainTagLayout)
         self.tagLayout.addLayout(self.subTagLayout)
 
+        self.predDetailLayout = QHBoxLayout(self.central)
+        self.predLabel = QLabel()
+        self.predLabel.setText(self.pred_col_fixed)
+        self.predText = QLineEdit()
+        self.predText.setEnabled(False)
+        self.predDetailLayout.addWidget(self.predLabel)
+        self.predDetailLayout.addWidget(self.predText)
+
         self.tagDetailLayout = QHBoxLayout(self.central)
         self.tagLabel = QLabel()
         self.tagLabel.setText(self.tag_col_fixed)
@@ -133,6 +143,7 @@ class QImageViewer(QMainWindow):
         self.descDetailLayout.addWidget(self.descLabel)
         self.descDetailLayout.addWidget(self.descText)
 
+        self.centerDetails.addLayout(self.predDetailLayout)
         self.centerDetails.addLayout(self.tagDetailLayout)
         self.centerDetails.addLayout(self.descDetailLayout)
         
@@ -244,8 +255,9 @@ class QImageViewer(QMainWindow):
 
             self.img_idx = self.get_idx_from_list(self.selected)
 
-            self.tagText.setText(self.metadata.loc[self.img_idx, self.tag_col])
-            self.descText.setText(self.metadata.loc[self.img_idx, self.conf_score_col])
+            self.predText.setText(f"{self.metadata.loc[self.img_idx, self.pred_col]}")
+            self.tagText.setText(f"{self.metadata.loc[self.img_idx, self.tag_col]}")
+            self.descText.setText(f"{self.metadata.loc[self.img_idx, self.conf_score_col]}")
 
         else:
             self.set_default_image_view()
@@ -287,10 +299,10 @@ class QImageViewer(QMainWindow):
         self.fitToWindowAct.setEnabled(True)
         self.updateActions()
 
-        self.imageLabel.setFixedSize(QSize(400, 400))
-        # self.imageLabel.adjustSize()
-        # if not self.fitToWindowAct.isChecked():
-        #     self.imageLabel.adjustSize()
+        # self.imageLabel.setFixedSize(QSize(400, 400))
+        self.imageLabel.adjustSize()
+        if not self.fitToWindowAct.isChecked():
+            self.imageLabel.adjustSize()
 
 
     def getSubTag(self):
@@ -447,10 +459,18 @@ class QImageViewer(QMainWindow):
                           "print an image.</p>")
 
     def createActions(self):
-        self.showPreviousAct = QAction("Show $Previous", self, shortcut=Qt.Key.Key_Left, triggered=self.showPrevious)
-        self.showNextAct = QAction("Show $Next", self, shortcut=Qt.Key.Key_Right, triggered=self.showNext)
+        self.showPreviousAct = QAction("Show $Previous", self,
+            shortcut="Ctrl+P",
+            # shortcut=Qt.Key.Key_Left,
+            triggered=self.showPrevious,
+        )
+        self.showNextAct = QAction("Show $Next", self,
+            shortcut="Ctrl+N",
+            # shortcut=Qt.Key.Key_Right,
+            triggered=self.showNext,
+        )
         self.openAct = QAction("&Open...", self, shortcut=QKeySequence("Ctrl+O"), triggered=self.open)
-        self.printAct = QAction("&Print...", self, shortcut="Ctrl+P", enabled=False, triggered=self.print_)
+        self.printAct = QAction("&Print...", self, enabled=False, triggered=self.print_)
         self.exitAct = QAction("E&xit", self, shortcut="Ctrl+Q", triggered=self.close)
         self.zoomInAct = QAction("Zoom &In (25%)", self, shortcut="Ctrl++", enabled=False, triggered=self.zoomIn)
         self.zoomOutAct = QAction("Zoom &Out (25%)", self, shortcut="Ctrl+-", enabled=False, triggered=self.zoomOut)
@@ -458,8 +478,9 @@ class QImageViewer(QMainWindow):
         self.fitToWindowAct = QAction("&Fit to Window", self, shortcut="Ctrl+W", enabled=False, checkable=True, triggered=self.fitToWindow)
         self.aboutAct = QAction("&About", self, triggered=self.about)
         self.aboutQtAct = QAction("About &Qt", self, triggered=qApp.aboutQt)
-        self.mainTagAsTrueAct = QAction(f"Set Main Tag to '{self.main_tag_true}'", self, shortcut="Ctrl+T", triggered=self.setMainTagAsTrue)
-        self.mainTagAsFalseAct = QAction(f"Set Main Tag to '{self.main_tag_false}'", self, shortcut="Ctrl+F", triggered=self.setMainTagAsFalse)
+        self.mainTagAsTrueAct = QAction(f"Set Main Tag to '{self.main_tag_true}'", self, shortcut="Ctrl+Shift+T", triggered=self.setMainTagAsTrue)
+        self.mainTagAsFalseAct = QAction(f"Set Main Tag to '{self.main_tag_false}'", self, shortcut="Ctrl+Shift+F", triggered=self.setMainTagAsFalse)
+
         # self.subTagAsErrAct = QAction(f"Set Main Tag to '{self.sub_tag_err}'", self, shortcut="Ctrl+E", triggered=self.setSubTagAsErr)
         # self.subTagAsDiffAct = QAction(f"Set Main Tag to '{self.sub_tag_diff}'", self, shortcut="Ctrl+D", triggered=self.setSubTagAsDiff)
         # self.mainFalsesubErrAct = QAction(f"Set Tag to '{self.main_tag_false}{self.sub_tag_err}'", self,
